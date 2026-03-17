@@ -52,33 +52,7 @@ struct ContentView: View {
                     bookmarkedURLs: bookmarkedURLSet,
                     onToggleBookmark: toggleBookmark
                 )
-                    .padding(.top, contentTopPadding)
                     .padding(.horizontal, horizontalPadding)
-
-                ZStack {
-                    TopNavigationView(selectedFeed: selectedFeed, onSelectFeed: { feed in
-                        selectedFeed = feed
-                        refreshID += 1
-                    })
-                    .frame(maxWidth: topNavMaxWidth)
-                    .frame(maxWidth: .infinity, alignment: .center)
-
-                    HStack {
-                        Spacer()
-                        Button {
-                            if isSidebarOpen {
-                                closeSidebar()
-                            } else {
-                                openSidebar()
-                            }
-                        } label: {
-                            HeaderSidebarView()
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-                .padding(.horizontal, horizontalPadding)
-                .padding(.top, topHeaderPadding)
 
                 if isSidebarOpen {
                     Color.black.opacity(0.24)
@@ -109,7 +83,28 @@ struct ContentView: View {
                 .allowsHitTesting(isSidebarOpen)
             }
             .animation(.spring(response: 0.32, dampingFraction: 0.86), value: isSidebarOpen)
-            .toolbar(.hidden, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    HStack(spacing: 12) {
+                        TopNavigationView(selectedFeed: selectedFeed, onSelectFeed: { feed in
+                            selectedFeed = feed
+                            refreshID += 1
+                        })
+
+                        Button {
+                            if isSidebarOpen {
+                                closeSidebar()
+                            } else {
+                                openSidebar()
+                            }
+                        } label: {
+                            Image(systemName: "bookmark")
+                        }
+                    }
+                    .foregroundStyle(.primary)
+                }
+            }
+            .toolbarBackground(.visible, for: .navigationBar)
             .task {
                 loadBookmarkedArticles()
             }
@@ -121,18 +116,6 @@ struct ContentView: View {
 
     private var horizontalPadding: CGFloat {
         horizontalSizeClass == .compact ? 12 : 16
-    }
-
-    private var contentTopPadding: CGFloat {
-        horizontalSizeClass == .compact ? 82 : 94
-    }
-
-    private var topNavMaxWidth: CGFloat {
-        horizontalSizeClass == .compact ? 340 : 420
-    }
-
-    private var topHeaderPadding: CGFloat {
-        horizontalSizeClass == .compact ? 2 : 6
     }
 
     private var sidebarPanelWidth: CGFloat {
@@ -189,99 +172,25 @@ enum FeedOption: String, CaseIterable, Hashable {
 }
 
 private struct TopNavigationView: View {
-    @Environment(\.colorScheme) private var colorScheme
     let selectedFeed: FeedOption
     let onSelectFeed: (FeedOption) -> Void
 
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(FeedOption.allCases, id: \.self) { feed in
-                    Button {
-                        onSelectFeed(feed)
-                    } label: {
-                        Text(feed.rawValue)
-                            .font(.footnote.weight(.semibold))
-                            .foregroundStyle(feed == selectedFeed ? Color.white : unselectedTextColor)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
-                            .background(
-                                Capsule(style: .continuous)
-                                    .fill(feed == selectedFeed ? Color.accentColor : unselectedPillColor)
-                            )
-                    }
-                    .buttonStyle(.plain)
-                }
+        Picker("Feed", selection: selection) {
+            ForEach(FeedOption.allCases, id: \.self) { feed in
+                Text(feed.rawValue)
+                    .tag(feed)
             }
         }
-        .padding(.horizontal, 2)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(navGlassTint)
+    }
+
+    private var selection: Binding<FeedOption> {
+        Binding(
+            get: { selectedFeed },
+            set: { newValue in
+                onSelectFeed(newValue)
+            }
         )
-        .glassEffect()
-        .clipShape(RoundedRectangle(cornerRadius: 18
-                                    , style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(glassBorderColor, lineWidth: 0.8)
-        )
-        .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.18 : 0.09), radius: 12, x: 0, y: 6)
-    }
-
-    private var navGlassTint: Color {
-        colorScheme == .dark
-            ? Color(red: 0.176, green: 0.176, blue: 0.176).opacity(0.76) // #2D2D2D
-            : Color(red: 0.949020, green: 0.949020, blue: 0.968627).opacity(0.62) // #F2F2F7
-    }
-
-    private var glassBorderColor: Color {
-        colorScheme == .dark ? Color.white.opacity(0.16) : Color.white.opacity(0.55)
-    }
-
-    private var unselectedPillColor: Color {
-        colorScheme == .dark ? Color.white.opacity(0.10) : Color.black.opacity(0.06)
-    }
-
-    private var unselectedTextColor: Color {
-        colorScheme == .dark ? Color.white.opacity(0.85) : Color.black.opacity(0.70)
-    }
-}
-
-private struct HeaderSidebarView: View {
-    @Environment(\.colorScheme) private var colorScheme
-
-    var body: some View {
-        VStack(spacing: 8) {
-            Image(systemName: "bookmark")
-                .font(.system(size: 14, weight: .bold))
-
-        }
-        .foregroundStyle(iconColor)
-        .frame(width: 42, height: 46)
-        .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(sidebarBackgroundColor)
-        )
-        .overlay(alignment: .leading) {
-            Rectangle()
-                .fill(sidebarBackgroundColor)
-                .frame(width: 10, height: 34)
-                .offset(x: -5)
-        }
-        .shadow(color: Color.black.opacity(0.16), radius: 10, x: 0, y: 5)
-    }
-
-    private var sidebarBackgroundColor: Color {
-        colorScheme == .dark
-            ? Color(red: 0.176, green: 0.176, blue: 0.176) // #2D2D2D
-            : Color(red: 0.949020, green: 0.949020, blue: 0.968627) // #F2F2F7
-    }
-
-    private var iconColor: Color {
-        colorScheme == .dark ? .white : Color(.label)
     }
 }
 
@@ -303,11 +212,7 @@ private struct SlideOutSidebarView: View {
                 Button {
                     onClose()
                 } label: {
-                    Image(systemName: "xmark")
-                        .font(.subheadline.weight(.bold))
-                        .foregroundStyle(primaryTextColor)
-                        .frame(width: 32, height: 32)
-                        .background(Color.black.opacity(colorScheme == .dark ? 0.24 : 0.06), in: Circle())
+
                 }
                 .buttonStyle(.plain)
             }
@@ -372,7 +277,6 @@ private struct SlideOutSidebarView: View {
         .padding(.top, 62)
         .padding(.bottom, 24)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .background(sidebarBackgroundColor)
         .overlay(alignment: .leading) {
             Rectangle()
                 .fill(Color.black.opacity(colorScheme == .dark ? 0.34 : 0.08))
@@ -893,30 +797,53 @@ struct HeadingCard: View {
 
 struct SafariView: UIViewControllerRepresentable {
     let url: URL
+    let onFinish: () -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onFinish: onFinish)
+    }
 
     func makeUIViewController(context: Context) -> SFSafariViewController {
         let config = SFSafariViewController.Configuration()
         config.entersReaderIfAvailable = true
-        return SFSafariViewController(url: url, configuration: config)
+        let controller = SFSafariViewController(url: url, configuration: config)
+        controller.delegate = context.coordinator
+        return controller
     }
 
     func updateUIViewController(_ uiViewController: SFSafariViewController, context: Context) {}
+
+    final class Coordinator: NSObject, SFSafariViewControllerDelegate {
+        private let onFinish: () -> Void
+
+        init(onFinish: @escaping () -> Void) {
+            self.onFinish = onFinish
+        }
+
+        func safariViewControllerDidFinish(_ controller: SFSafariViewController) {
+            onFinish()
+        }
+    }
 }
 
 struct ArticleScreen: View {
     let articleURL: String
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        if let url = URL(string: articleURL) {
-            SafariView(url: url)
-                .ignoresSafeArea()
-        } else {
-            ContentUnavailableView(
-                "Article Unavailable",
-                systemImage: "newspaper.fill",
-                description: Text("The article URL is invalid.")
-            )
+        Group {
+            if let url = URL(string: articleURL) {
+                SafariView(url: url, onFinish: { dismiss() })
+                    .ignoresSafeArea()
+            } else {
+                ContentUnavailableView(
+                    "Article Unavailable",
+                    systemImage: "newspaper.fill",
+                    description: Text("The article URL is invalid.")
+                )
+            }
         }
+        .toolbar(.hidden, for: .navigationBar)
     }
 }
 

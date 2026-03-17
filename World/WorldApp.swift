@@ -11,7 +11,6 @@ import SwiftData
 @main
 struct WorldApp: App {
     init() {
-        NavigationBarStyle.apply()
         NotificationManager.requestPermissionAndScheduleDaily(hour: 7, minute: 0)
     }
 
