@@ -38,19 +38,19 @@ class ca {
     }
 
     private func fetchEverything() async throws -> [Article] {
-        let url = URL(string: "https://newsapi.org/v2/everything?q=Russia&language=ru&sortBy=publishedAt&apiKey=\(newsApiKey)")!
+        let url = URL(string: "https://newsapi.org/v2/everything?q=Canada&language=en&sortBy=publishedAt&apiKey=\(newsApiKey)")!
         let (data, _) = try await URLSession.shared.data(from: url)
         return try decodeArticles(from: data)
     }
 
     private func decodeArticles(from data: Data) throws -> [Article] {
         guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            throw RUAPIError.invalidPayload
+            throw CAAPIError.invalidPayload
         }
 
         if let status = json["status"] as? String, status != "ok" {
             let message = json["message"] as? String ?? "Unknown NewsAPI error"
-            throw RUAPIError.apiError(message)
+            throw CAAPIError.apiError(message)
         }
 
         let articles = json["articles"] as? [[String: Any]] ?? []
@@ -67,7 +67,7 @@ class ca {
     }
 }
 
-private enum RUAPIError: Error {
+private enum CAAPIError: Error {
     case invalidPayload
     case apiError(String)
 }

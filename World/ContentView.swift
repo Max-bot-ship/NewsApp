@@ -55,10 +55,11 @@ struct ContentView: View {
                     .padding(.horizontal, horizontalPadding)
 
                 if isSidebarOpen {
-                    Color.black.opacity(0.24)
+                    Color.black.opacity(0.40)
                         .ignoresSafeArea()
                         .transition(.opacity)
                         .onTapGesture {
+                        
                             closeSidebar()
                         }
                 }
@@ -70,6 +71,9 @@ struct ContentView: View {
                         onSelectArticle: { bookmarked in
                             selectedBookmarkedArticle = bookmarked
                             closeSidebar()
+                        },
+                        onDeleteArticle: { bookmarked in
+                            removeBookmark(bookmarked)
                         },
                         onClose: {
                             closeSidebar()
@@ -143,6 +147,13 @@ struct ContentView: View {
         saveBookmarkedArticles()
     }
 
+    private func removeBookmark(_ bookmarked: BookmarkedArticle) {
+        if let index = bookmarkedArticles.firstIndex(of: bookmarked) {
+            bookmarkedArticles.remove(at: index)
+            saveBookmarkedArticles()
+        }
+    }
+
     private func loadBookmarkedArticles() {
         guard let data = UserDefaults.standard.data(forKey: Self.bookmarksStorageKey) else { return }
         guard let decoded = try? JSONDecoder().decode([BookmarkedArticle].self, from: data) else { return }
@@ -159,11 +170,14 @@ struct ContentView: View {
 
 
 func navbar() {
-    
+     
 }
 
 enum FeedOption: String, CaseIterable, Hashable {
-    case us = "US"
+    case us = "US 🇺🇸"
+    case ru = "Russia 🇷🇺"
+    case ca = "Canada 🇨🇦"
+    case ae = "UAE 🇦🇪"
     case tech = "Tech"
     case politics = "Politics"
     case nyctimes = "NY Times"
@@ -198,6 +212,7 @@ private struct SlideOutSidebarView: View {
     @Environment(\.colorScheme) private var colorScheme
     let bookmarkedArticles: [BookmarkedArticle]
     let onSelectArticle: (BookmarkedArticle) -> Void
+    let onDeleteArticle: (BookmarkedArticle) -> Void
     let onClose: () -> Void
 
     var body: some View {
@@ -229,46 +244,56 @@ private struct SlideOutSidebarView: View {
                 }
                 .padding(.top, 12)
             } else {
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: 8) {
-                        ForEach(bookmarkedArticles) { article in
-                            Button {
-                                onSelectArticle(article)
-                            } label: {
-                                HStack(alignment: .top, spacing: 10) {
-                                    Image(systemName: "bookmark.fill")
-                                        .font(.caption.weight(.bold))
-                                        .foregroundStyle(Color.accentColor)
-                                        .padding(.top, 3)
+                List {
+                    ForEach(bookmarkedArticles) { article in
+                        Button {
+                            onSelectArticle(article)
+                        } label: {
+                            HStack(alignment: .top, spacing: 10) {
+                                Image(systemName: "bookmark.fill")
+                                    .font(.caption.weight(.bold))
+                                    .foregroundStyle(Color.accentColor)
+                                    .padding(.top, 3)
 
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text(article.title)
-                                            .font(.subheadline.weight(.semibold))
-                                            .foregroundStyle(primaryTextColor)
-                                            .lineLimit(2)
-                                            .multilineTextAlignment(.leading)
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(article.title)
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(primaryTextColor)
+                                        .lineLimit(2)
+                                        .multilineTextAlignment(.leading)
 
-                                        if let source = article.source {
-                                            Text(source)
-                                                .font(.caption2.weight(.medium))
-                                                .foregroundStyle(secondaryTextColor)
-                                                .lineLimit(1)
-                                        }
+                                    if let source = article.source {
+                                        Text(source)
+                                            .font(.caption2.weight(.medium))
+                                            .foregroundStyle(secondaryTextColor)
+                                            .lineLimit(1)
                                     }
-
-                                    Spacer()
                                 }
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 10)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                        .fill(rowBackground)
-                                )
+
+                                Spacer()
                             }
-                            .buttonStyle(.plain)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 10)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .fill(rowBackground)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
+                        .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            Button(role: .destructive) {
+                                onDeleteArticle(article)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
                         }
                     }
                 }
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
             }
 
             Spacer(minLength: 0)
@@ -323,6 +348,9 @@ struct Headings: View {
     @State private var articles: [Article] = []
     @State private var trendingArticles: [Article] = []
     let uservice = us()
+    let caService = ca()
+    let ruService = ru()
+    let aeService = ae()
     let trendingService = trending()
     let bbcService = bbc()
     let guardianService = guardian()
@@ -358,7 +386,7 @@ struct Headings: View {
                 .frame(maxWidth: .infinity)
                 .opacity(1 - fadeProgressDouble)
             }
-            .padding(.top, topHeaderPadding)
+            .padding(.top, -40)
             .padding(.bottom, 10)
 
             Text("Top Stories")
@@ -388,7 +416,12 @@ struct Headings: View {
             }
             .padding(.top, 8)
             .padding(.bottom, 14)
-
+            
+            
+            Text(selectedFeed.rawValue)
+                .font(.title2.weight(.bold))
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.top, 2)
             LazyVGrid(columns: columns, spacing: 12) {
                 ForEach(articles) { article in
                     NavigationLink {
@@ -445,12 +478,19 @@ struct Headings: View {
         do {
             let fetchedArticles = try await fetchArticles(for: selectedFeed)
             guard !Task.isCancelled else { return }
-            articles = Array(fetchedArticles.prefix(10))
+            let processedArticles = await translateRussianTitlesIfNeeded(from: fetchedArticles)
+            guard !Task.isCancelled else { return }
+            articles = Array(processedArticles.prefix(10))
         } catch is CancellationError {
             return
         } catch {
             print("Error fetching articles: \(error)")
         }
+    }
+
+    private func translateRussianTitlesIfNeeded(from fetchedArticles: [Article]) async -> [Article] {
+        guard selectedFeed == .ru else { return fetchedArticles }
+        return await RussianTitleTranslator.shared.translateTitlesIfNeeded(fetchedArticles)
     }
 
     private func loadTrendingIfNeeded() async {
@@ -472,6 +512,12 @@ struct Headings: View {
         case .us:
             return try await
                 uservice.fetchArticles()
+        case .ca:
+            return try await caService.fetchArticles()
+        case .ru:
+            return try await ruService.fetchArticles()
+        case .ae:
+            return try await aeService.fetchArticles()
         case .bbc:
             return try await bbcService.fetchArticles()
         case .tech:
@@ -499,7 +545,7 @@ struct TrendingCard: View {
     let article: Article
 
     var body: some View {
-        ZStack(alignment: .bottomLeading) {
+        ZStack {
             if let url = articleImageURL {
                 AsyncImage(url: url) { image in
                     image
@@ -523,13 +569,18 @@ struct TrendingCard: View {
                     .font(.system(size: 34, weight: .bold))
                     .foregroundStyle(.white.opacity(0.90))
             }
-
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: cardHeight)
+        .clipped()
+        .overlay(
             LinearGradient(
                 colors: [.clear, .black.opacity(0.70)],
                 startPoint: .top,
                 endPoint: .bottom
             )
-
+        )
+        .overlay(alignment: .bottomLeading) {
             VStack(alignment: .leading, spacing: 8) {
                 Label("Trending", systemImage: "flame.fill")
                     .font(.caption.weight(.semibold))
@@ -541,9 +592,8 @@ struct TrendingCard: View {
                 Text(article.title)
                     .font(.system(size: titleSize, weight: .bold, design: .default))
                     .foregroundStyle(.white)
-                    .lineLimit(3)
+                    .lineLimit(2)
                     .multilineTextAlignment(.leading)
-                    .padding(.bottom,80)
 
                 if let sourceHost {
                     Text(sourceHost.uppercased())
@@ -552,15 +602,8 @@ struct TrendingCard: View {
                         .lineLimit(1)
                 }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
-            .padding(.horizontal, 16)
-            .padding(.top, 16)
-            .padding(.bottom, 56)
-            .offset(y: -18)
+            .padding(16)
         }
-        .frame(maxWidth: .infinity)
-        .frame(height: cardHeight)
-        .clipped()
         .overlay(
             RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .stroke(borderColor, lineWidth: 1)
@@ -585,7 +628,7 @@ struct TrendingCard: View {
     }
 
     private var cardHeight: CGFloat {
-        horizontalSizeClass == .compact ? 290 : 340
+        horizontalSizeClass == .compact ? 290 : 240
     }
 
     private var borderColor: Color {

@@ -5,7 +5,7 @@
 //  Created by Skyler on 2/28/26.
 //
 
-import UIKit
+internal import UIKit
 
 enum NavigationBarStyle {
     static func apply() {

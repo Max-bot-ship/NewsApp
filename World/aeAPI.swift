@@ -14,7 +14,7 @@
 import Foundation
 
 
-class ru {
+class ae {
     let newsApiKey = "fef3f022f2bf43fea36d30b094a86918"
     
     func fetchArticles() async throws -> [Article] {
@@ -38,19 +38,19 @@ class ru {
     }
 
     private func fetchEverything() async throws -> [Article] {
-        let url = URL(string: "https://newsapi.org/v2/everything?q=Russia&language=ru&sortBy=publishedAt&apiKey=\(newsApiKey)")!
+        let url = URL(string: "https://newsapi.org/v2/everything?q=UAE&language=en&sortBy=publishedAt&apiKey=\(newsApiKey)")!
         let (data, _) = try await URLSession.shared.data(from: url)
         return try decodeArticles(from: data)
     }
 
     private func decodeArticles(from data: Data) throws -> [Article] {
         guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            throw RUAPIError.invalidPayload
+            throw AEAPIError.invalidPayload
         }
 
         if let status = json["status"] as? String, status != "ok" {
             let message = json["message"] as? String ?? "Unknown NewsAPI error"
-            throw RUAPIError.apiError(message)
+            throw AEAPIError.apiError(message)
         }
 
         let articles = json["articles"] as? [[String: Any]] ?? []
@@ -67,7 +67,7 @@ class ru {
     }
 }
 
-private enum RUAPIError: Error {
+private enum AEAPIError: Error {
     case invalidPayload
     case apiError(String)
 }
